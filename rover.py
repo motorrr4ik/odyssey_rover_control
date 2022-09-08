@@ -37,7 +37,7 @@ class Rover(Thread):
 
 
     def __less_than_min_border(self, dc_val:int = 0):
-        if dc_val < self.__BORDER:
+        if dc_val < self.__MIN_BORDER:
             return True
         else:
             return False
@@ -48,10 +48,13 @@ class Rover(Thread):
         else: 
             return False
 
+    def stop_rover():
+        self.__set_right_dc(0)
+        self.__set_left_dc(0)
 
     def set_speed(self, linear_sp:int, angular_sp:int):
         if self.__less_than_min_border(linear_sp):
-            linear_sp = self__MIN_BORDER
+            linear_sp = self.__MIN_BORDER
             right_sp = linear_sp + angular_sp
             left_sp = linear_sp - angular_sp
         else: 
@@ -61,7 +64,7 @@ class Rover(Thread):
         if self.__more_than_max_border(right_sp):
             right_sp = self.__MAX_BORDER
 
-        if self.more_than_max_border(left_sp):
+        if self.__more_than_max_border(left_sp):
             left_sp = self.__MAX_BORDER
 
         self.__set_right_dc(right_sp)
@@ -87,16 +90,15 @@ if __name__ == "__main__":
     rover.init_left_motor(24, 18, 26)
     rover.start()
     try:
-
         while(1):
             # get data from camera
-            rover.set_speed(50, 20)
+            rover.set_speed(50, 40)
            # sleep(2)
            # rover.set_left_dc(85)
            # rover.set_right_dc(85)
            # sleep(2)
     except KeyboardInterrupt:
-        rover.set_speed(0, 0)
+        rover.stop_rover()
         #rover.set_right_dc(0)
         rover.disable_motors()
     #rover.move_rover.set_rigrover.set_right_dc(50) ht_dc(50) right_motors_forward()
