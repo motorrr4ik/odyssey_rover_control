@@ -17,6 +17,9 @@ class Rover(Thread):
         #self.right_motor = Motor(27, 10, 19, 100)
         #self.left_motor = Motor(24, 18, 26, 100)
     
+    def __del__(self):
+        GPIO.cleanup()
+
     def init_left_motor(self, en1:int, en2:int, enable:int):
         self.left_motor = Motor(en1, en2, enable, 100)
         self.left_motor.enable_motor()
@@ -25,7 +28,7 @@ class Rover(Thread):
         self.right_motor = Motor(en1, en2, enable, 100)
         self.right_motor.enable_motor()
     
-    def disable_motors():
+    def disable_motors(self):
         self.right_motor.disable_motor()
         self.left_motor.disable_motor()
 
@@ -48,7 +51,7 @@ class Rover(Thread):
         else: 
             return False
 
-    def stop_rover():
+    def stop_rover(self):
         self.__set_right_dc(0)
         self.__set_left_dc(0)
 
@@ -82,17 +85,17 @@ class Rover(Thread):
             self.right_motor.set_dc(self.dc_right)
             self.left_motor.set_dc(self.dc_left)
 
-        
 if __name__ == "__main__":
     rover = Rover()
     rover.to_string()
     rover.init_right_motor(27, 10, 19)
     rover.init_left_motor(24, 18, 26)
+    rover.setDaemon(True)
     rover.start()
     try:
         while(1):
             # get data from camera
-            rover.set_speed(50, 40)
+            rover.set_speed(50, -40)
            # sleep(2)
            # rover.set_left_dc(85)
            # rover.set_right_dc(85)
