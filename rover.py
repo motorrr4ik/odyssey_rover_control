@@ -2,7 +2,8 @@ import RPi.GPIO as GPIO
 from threading import Thread
 from time import sleep
 from motor import Motor
-import random
+import socket
+import numpy as np
 
 class Rover(Thread):
 
@@ -17,8 +18,26 @@ class Rover(Thread):
         #self.right_motor = Motor(27, 10, 19, 100)
         #self.left_motor = Motor(24, 18, 26, 100)
     
-    def __del__(self):
+    def __del__():
         GPIO.cleanup()
+
+    #will wait until connections is established
+    def init_server_socket(self, port:int):
+        self.server_socket = socket.socket()
+        self.server_socket.bind(('', port))
+        
+        print("Waiting for connection...")
+        self.server_socket.listen(1)
+        self.conn, self.addr = self.server_socket.accept()
+        print("Connected: ", self.addr) 
+
+    #message type is np.array 1x2 size [linear_speed, angular_speed]
+    def get_message(self):
+        message = np.frombuffer(self.conn.recv(88888), np.uint8)
+        return message
+    
+    def close_connection(self):
+        self.conn.close()
 
     def init_left_motor(self, en1:int, en2:int, enable:int):
         self.left_motor = Motor(en1, en2, enable, 100)
@@ -90,12 +109,17 @@ if __name__ == "__main__":
     rover.to_string()
     rover.init_right_motor(27, 10, 19)
     rover.init_left_motor(24, 18, 26)
+    rover.init_server_socket(9999)
     rover.setDaemon(True)
     rover.start()
     try:
         while(1):
+            message = rover.get_message()
+            if message.size == 0:
+                print("Emty data received!")
             # get data from camera
-            rover.set_speed(50, 60)
+            else:
+                rover.set_speed(message[0], 0)
            # sleep(2)
            # rover.set_left_dc(85)
            # rover.set_right_dc(85)
@@ -104,6 +128,7 @@ if __name__ == "__main__":
         rover.stop_rover()
         #rover.set_right_dc(0)
         rover.disable_motors()
+        rover.close_connection()
     #rover.move_rover.set_rigrover.set_right_dc(50) ht_dc(50) right_motors_forward()
     #sleep(5)
     #rover.stop_motors()
