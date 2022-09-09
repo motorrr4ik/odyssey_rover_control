@@ -71,7 +71,7 @@ class Rover(Thread):
             left_sp = self.__MAX_BORDER
 
         self.__set_right_dc(right_sp)
-        self.__set_left_dc(left_sp)
+        self.__set_left_dc(-left_sp)
 
     def __set_right_dc(self, new_right_dc:int):
         self.dc_right = new_right_dc
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     try:
         while(1):
             # get data from camera
-            rover.set_speed(50, -40)
+            rover.set_speed(50, 60)
            # sleep(2)
            # rover.set_left_dc(85)
            # rover.set_right_dc(85)
