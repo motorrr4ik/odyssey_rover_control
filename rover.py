@@ -2,8 +2,12 @@ import RPi.GPIO as GPIO
 from threading import Thread
 from time import sleep
 from motor import Motor
+from cleaner import Cleaner
 import socket
 import numpy as np
+
+EVAL_PC_HOST = '127.0.0.1'
+EVAL_PC_PORT = 6677
 
 class Rover(Thread):
 
@@ -14,30 +18,30 @@ class Rover(Thread):
         self.dc_left = 0
 
         self.__MIN_BORDER = 85
+        self.__SPEED = 85
         self.__MAX_BORDER = 100
         #self.right_motor = Motor(27, 10, 19, 100)
         #self.left_motor = Motor(24, 18, 26, 100)
+        self.client_socket = None
     
-    def __del__():
+    def __del__(self):
         GPIO.cleanup()
+        if self.client_socket:
+            self.close_connection()
 
     #will wait until connections is established
-    def init_server_socket(self, port:int):
-        self.server_socket = socket.socket()
-        self.server_socket.bind(('', port))
-        
-        print("Waiting for connection...")
-        self.server_socket.listen(1)
-        self.conn, self.addr = self.server_socket.accept()
-        print("Connected: ", self.addr) 
+    def init_client_socket(self):
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect((EVAL_PC_HOST, EVAL_PC_PORT))
 
     #message type is np.array 1x2 size [linear_speed, angular_speed]
     def get_message(self):
-        message = np.frombuffer(self.conn.recv(88888), np.uint8)
+        #message = np.frombuffer(self.client_socket.recv(10000), np.float64)
+        message = self.client_socket.recv(10000).decode()
         return message
     
     def close_connection(self):
-        self.conn.close()
+        self.client_socket.close()
 
     def init_left_motor(self, en1:int, en2:int, enable:int):
         self.left_motor = Motor(en1, en2, enable, 100)
@@ -57,6 +61,8 @@ class Rover(Thread):
     def get_right_motors_pins(self):
         print("en_1 : " + str(self.en1_right) + " " + "en_2 : " + str(self.en2_right) + "  " + "enable : " + str(self.enable_right))
 
+    def get_left_motors_pins(self):
+        print("en_1 : " + str(self.en1_left) + " " + "en_2 : " + str(self.en2_left) + "  " + "enable : " + str(self.enable_left))
 
     def __less_than_min_border(self, dc_val:int = 0):
         if dc_val < self.__MIN_BORDER:
@@ -97,7 +103,26 @@ class Rover(Thread):
 
     def __set_left_dc(self, new_left_dc:int):
         self.dc_left = new_left_dc
-    
+
+    def go_forward(self):
+        self.__set_right_dc(self.__SPEED)
+        self.__set_left_dc(-self.__SPEED)
+
+    def go_back(self):
+        self.__set_right_dc(-self.__SPEED)
+        self.__set_left_dc(self.__SPEED)
+   
+
+    def go_left(self):
+        self.__set_right_dc(self.__SPEED)
+        self.__set_left_dc(self.__SPEED)
+
+
+
+    def go_right(self):
+        self.__set_right_dc(-self.__SPEED)
+        self.__set_left_dc(-self.__SPEED)
+
 
     def run(self):
         while(1):
@@ -106,20 +131,44 @@ class Rover(Thread):
 
 if __name__ == "__main__":
     rover = Rover()
+    cleaner = Cleaner(2)
     rover.to_string()
     rover.init_right_motor(27, 10, 19)
     rover.init_left_motor(24, 18, 26)
-    rover.init_server_socket(9999)
+    rover.init_client_socket()
     rover.setDaemon(True)
     rover.start()
     try:
         while(1):
             message = rover.get_message()
-            if message.size == 0:
+            #print(message.encode())
+            if len(message) == 0:
                 print("Emty data received!")
             # get data from camera
-            else:
-                rover.set_speed(message[0], 0)
+            elif message == 'v':
+                rover.stop_rover()
+            elif message == 'n':
+                cleaner.enable()
+            elif message == 'f':
+                cleaner.disable()
+            elif message == 'w':
+                rover.go_forward()
+                #sleep(1)
+                #rover.stop_rover()
+            elif message == 's':
+                rover.go_back()
+                #sleep(1)
+                #rover.stop_rover()
+            elif message == 'a':
+                rover.go_left()
+                #sleep(1)
+                #rover.stop_rover()
+            elif message == 'd':
+                rover.go_right()
+                #sleep(1)
+                #rover.stop_rover()
+                #rover.set_speed(message[0], 0)
+                print(message)
            # sleep(2)
            # rover.set_left_dc(85)
            # rover.set_right_dc(85)
